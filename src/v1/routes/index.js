@@ -1,5 +1,9 @@
+const { roleRoute } = require("./role.route");
+const { userRoute } = require("./user.route");
+
 function initialRouter(app) {
-    return app;
+    app.use("/api/v1/role", roleRoute);
+    app.use("/api/v1/user", userRoute);
 }
 
 module.exports = initialRouter;
