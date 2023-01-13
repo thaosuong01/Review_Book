@@ -1,0 +1,41 @@
+@url = http://localhost:5000/api/v1/user
+
+### GET ALL 
+GET {{url}}?limit=12&page=1
+
+### GET BY ID
+GET {{url}}/63c1260328dff2e7ef69e000
+
+### CREATE 
+POST {{url}}
+Content-Type: application/json
+
+{
+    "email": "example2@gmail.com",
+    "password": "12345678",
+    "roleId": "63c109122c73e0354686eedd"
+}
+
+### UPDATE 
+PATCH {{url}}/63c1091f2c73e0354686eee0
+Content-Type: application/json
+
+{
+    "email": "example3@gmail.com",
+    "roleId": "63c109122c73e0354686eedd",
+    "full_name": "Example"
+}
+
+### CHANGE PASSWORD
+PATCH {{url}}/change-password/63c1260328dff2e7ef69e000
+Content-Type: application/json
+
+{
+    "password": "11111111"
+}
+
+### DELETE
+DELETE {{url}}/63bffa430fd6f6d8d3f95dd7
+
+### DELETE
+DELETE {{url}}/force/63bffa430fd6f6d8d3f95dd7

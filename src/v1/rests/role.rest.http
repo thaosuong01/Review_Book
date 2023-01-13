@@ -1,7 +1,7 @@
 @url = http://localhost:5000/api/v1/role
 
 ### GET ALL 
-GET {{url}}?limit=1&page=2
+GET {{url}}?limit=2&page=1
 
 ### GET BY ID
 GET {{url}}/63bffa430fd6f6d8d3f95dd7
@@ -11,17 +11,17 @@ POST {{url}}
 Content-Type: application/json
 
 {
-    "name": "Quản trị viên 2",
-    "key": "ADMIN 2"
+    "name": "Quản trị viên 5",
+    "key": "ADMIN 5"
 }
 
 ### UPDATE 
-PATCH {{url}}/63bffa430fd6f6d8d3f95dd7
+PATCH {{url}}/63c121473f0914739b5c3184
 Content-Type: application/json
 
 {
-    "name": "Quản trị viên 3",
-    "key": "ADMIN 3"
+    "name": "Quản trị viên 6",
+    "key": "ADMIN 5"
 }
 
 ### DELETE
