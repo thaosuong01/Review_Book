@@ -9,4 +9,33 @@ Content-Type: application/json
     "password": "12345678"
 }
 
-### VERIFY ACCOUNT
+### SIGN IN
+POST {{url}}/sign-in
+Content-Type: application/json
+
+{
+    "email": "maikhoi10112001@gmail.com",
+    "password": "123456789"
+}
+
+### GET CURRENT USER
+GET {{url}}/sign-in
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7Il9pZCI6IjYzYzFhM2VmODg2ODk0ZmFiNTNlZTdjMCIsImVtYWlsIjoibWFpa2hvaTEwMTEyMDAxQGdtYWlsLmNvbSIsImZ1bGxfbmFtZSI6IiIsInJvbGUiOiJVU0VSIiwiaW1hZ2UiOiIiLCJpc192ZXJpZmllZCI6dHJ1ZX0sImlhdCI6MTY3NDkxNDkzMiwiZXhwIjoxNjc0OTE0OTUyfQ.MKlk0kKb6FQ-ES0U4HFlv0SAS35eyqpb7yymV-Csns8
+
+### REFRESH TOKEN
+GET {{url}}/refresh-token
+
+### FORGOT PASSWORD
+POST {{url}}/forgot-password
+Content-Type: application/json
+
+{
+    "email": "maikhoi10112001@gmail.com"
+}
+### CHANGE PASSWORD
+POST {{url}}/forgot-password/maikhoi10112001@gmail.com?token=$2b$10$Ri6yMndM4rZZUlJEypeP7O8iH3SbEHolhotEW58RFanQUCZTx12gS
+Content-Type: application/json
+
+{
+    "password": "123456789"
+}

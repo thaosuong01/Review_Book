@@ -1,133 +1,367 @@
 const ParentService = require("./parent.service");
 const { validateEmail, sendEmailVerifyAccount } = require("./email.service");
 const OtpGenerator = require("otp-generator");
+const { jwtService } = require("./jwt.service");
 const { _Token } = require("../models/token.model");
+const {
+  handleHtmlLang,
+  handleHtmlLangEmailForgotPassword,
+} = require("../utils/functions");
+const TokenService = require("./token.service");
 const { URI_SERVER } = process.env;
 
+const PRIVATE_KEY_ACCESS_TOKEN = process.env.PRIVATE_KEY_ACCESS_TOKEN;
+const PRIVATE_KEY_REFRESH_TOKEN = process.env.PRIVATE_KEY_REFRESH_TOKEN;
 
 class AuthService extends ParentService {
+  signUp = ({ email, password }) => {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const checkEmail = await validateEmail(email);
 
-    signUp = async ({ email, password }) => {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const checkEmail = await validateEmail(email);
+        if (checkEmail.errors) {
+          return resolve(checkEmail);
+        }
 
-                if (checkEmail.errors) {
-                    return resolve(checkEmail);
-                }
+        const findEmail = await this.model
+          .findOne({
+            email: email,
+          })
+          .exec();
 
-                const findEmail = await this.model
-                    .findOne({
-                        email: email
-                    })
-                    .exec();
+        if (findEmail) {
+          return resolve({
+            errors: {
+              message: "Email đã tồn tại",
+            },
+            status: 400,
+          });
+        }
 
-                if (findEmail) {
-                    return resolve({
-                        errors: {
-                            message: "Email đã tồn tại",
-                        },
-                        status: 400
-                    })
-                }
+        const hashPassword = await this.model.hashPassword(password);
 
-                const hashPassword = await this.model.hashPassword(password);
+        const response = await this.create({
+          email,
+          password: hashPassword,
+        });
 
-                const response = await this.create({
-                    email,
-                    password: hashPassword
-                });
+        // Create token and save token
+        const { token } = await TokenService.create({
+          user_id: response.elements._id,
+        });
 
-                // Create token and save token
-                const OTP = OtpGenerator.generate(6, {
-                    digits: true,
-                    lowerCaseAlphabets: false,
-                    upperCaseAlphabets: false,
-                    specialChars: false,
-                });
+        const URL_REDIRECT = `${URI_SERVER}api/v1/auth/verify/${email}?token=${token}`;
 
-                const hashOTP = await _Token.hashToken(OTP)
+        const dataSend = {
+          data: response.elements,
+          sendToEmail: email,
+          urlVerify: URL_REDIRECT,
+        };
 
-                await _Token.create({ user_id: response.elements._id, token: hashOTP });
+        const options = {
+          subject: "Xác thực tài khoản",
+          handleHtmlLang: handleHtmlLang(dataSend),
+        };
 
-                const URL_REDIRECT = `${URI_SERVER}api/v1/auth/verify/${email}?token=${hashOTP}`;
+        const sendEmailResponse = await sendEmailVerifyAccount(
+          dataSend,
+          options
+        );
 
-                const dataSend = {
-                    data: response.elements,
-                    sendToEmail: email,
-                    urlVerify: URL_REDIRECT,
-                }
+        resolve(sendEmailResponse);
+      } catch (error) {
+        reject(error);
+      }
+    });
+  };
 
-                const sendEmailResponse = await sendEmailVerifyAccount(dataSend)
+  signIn = ({ email, password }) => {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const findEmail = await this.model
+          .findOne({ email, is_delete: false })
+          .select("email password is_verified role full_name image")
+          .exec();
 
-                resolve(sendEmailResponse);
+        if (!findEmail.is_verified) {
+          return resolve({
+            errors: {
+              message:
+                "Tài khoản của bạn chưa được xác thực, vui lòng kiểm tra lại email!",
+            },
+            status: 400,
+          });
+        }
 
-            } catch (error) {
-                reject(error)
-            }
-        })
-    };
+        const comparePassword = await this.model.comparePassword(
+          password,
+          findEmail.password
+        );
 
-    signIn = async ({ }) => { };
+        if (!comparePassword) {
+          return resolve({
+            errors: {
+              message: "Mật khẩu không chính xác!",
+            },
+            status: 400,
+          });
+        }
 
-    verifyAccount = ({ email, otp }) => {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const findOTP = await _Token.findOne({ token: otp }).exec();
+        const { password: oldPassword, ...others } = findEmail._doc;
 
-                if (!findOTP) {
-                    return resolve({
-                        errors: {
-                            message: "Mã xác thực của bạn đã hết hạn. Vui lòng click vào để gửi lại mã xác thực",
-                        },
-                        status: 400,
-                    })
-                }
+        const accessToken = jwtService.sign(
+          { user: others },
+          PRIVATE_KEY_ACCESS_TOKEN,
+          {
+            expiresIn: "20s",
+          }
+        );
 
-                const findUser = await this.model.findOne({
-                    email: email,
-                    _id: findOTP.user_id,
-                })
-                    .exec();
+        const refreshToken = jwtService.sign(
+          { user: others },
+          PRIVATE_KEY_REFRESH_TOKEN,
+          {
+            expiresIn: "1w",
+          }
+        );
 
-                if (!findUser) {
-                    return resolve({
-                        errors: {
-                            message: "Chúng tôi không thể tìm thấy người dùng cho mã xác minh này. Vui lòng Đăng ký tài khoản!",
-                        },
-                        status: 400,
-                    })
-                }
+        resolve({
+          errors: null,
+          elements: {
+            accessToken,
+            refreshToken,
+          },
+          status: 200,
+          meta: {
+            message: "Đăng nhập thành công",
+          },
+        });
+      } catch (error) {
+        reject(error);
+      }
+    });
+  };
 
-                if (findUser.is_verified) {
-                    resolve({
-                        status: 200,
-                        elements: {
-                            message: "Xác thực tài khoản thành công!",
-                        },
-                        errors: null
-                    });
-                }
+  verifyAccount = ({ email, otp }) => {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const findOTP = await _Token.findOne({ token: otp }).exec();
 
-                findUser.is_verified = true;
+        if (!findOTP) {
+          return resolve({
+            errors: {
+              message:
+                "Mã xác thực của bạn đã hết hạn. Vui lòng click vào để gửi lại mã xác thực",
+            },
+            status: 400,
+          });
+        }
 
-                await findUser.save();
+        const findUser = await this.model
+          .findOne({
+            email: email,
+            _id: findOTP.user_id,
+          })
+          .exec();
 
-                await findOTP.delete();
+        if (!findUser) {
+          return resolve({
+            errors: {
+              message:
+                "Chúng tôi không thể tìm thấy người dùng cho mã xác minh này. Vui lòng Đăng ký tài khoản!",
+            },
+            status: 400,
+          });
+        }
 
-                resolve({
-                    status: 200,
-                    elements: {
-                        message: "Xác thực tài khoản thành công!",
-                    },
-                    errors: null
-                });
+        if (findUser.is_verified) {
+          resolve({
+            status: 200,
+            elements: {
+              message: "Xác thực tài khoản thành công!",
+            },
+            errors: null,
+          });
+        }
 
-            } catch (error) {
-                reject(error)
-            }
-        })
-    }
+        findUser.is_verified = true;
+
+        await findUser.save();
+
+        await findOTP.delete();
+
+        resolve({
+          status: 200,
+          elements: {
+            message: "Xác thực tài khoản thành công!",
+          },
+          errors: null,
+        });
+      } catch (error) {
+        reject(error);
+      }
+    });
+  };
+
+  forgotPassword = ({ email }) => {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const findEmail = await this.model
+          .findOne({ email, is_delete: false })
+          .select("_id")
+          .exec();
+
+        if (!findEmail) {
+          return resolve({
+            errors: {
+              message: "Email này không tồn tại trong hệ thống!",
+            },
+            status: 400,
+          });
+        }
+
+        const { token } = await TokenService.create({ user_id: findEmail._id });
+
+        const URL_REDIRECT = `${process.env.URI_SERVER}api/v1/auth/forgot-password/${email}?token=${token}`;
+
+        const dataSend = {
+          data: {},
+          sendToEmail: email,
+          urlVerify: URL_REDIRECT,
+        };
+
+        const options = {
+          subject: "Quên mật khẩu",
+          handleHtmlLang: handleHtmlLangEmailForgotPassword(dataSend),
+        };
+
+        const sendEmailResponse = await sendEmailVerifyAccount(
+          dataSend,
+          options
+        );
+
+        resolve(sendEmailResponse);
+      } catch (error) {
+        reject(error);
+      }
+    });
+  };
+
+  changePassword = ({ email, token, password }) => {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const findOTP = await _Token.findOne({ token }).exec();
+
+        if (!findOTP) {
+          return resolve({
+            errors: {
+              message:
+                "Xác thực tài khoản của bạn đã hết hạn. Vui lòng click vào để gửi lại mã xác thực!",
+            },
+            status: 400,
+          });
+        }
+
+        const findUser = await this.model
+          .findOne({
+            email: email,
+            _id: findOTP.user_id,
+            is_delete: false,
+          })
+          .exec();
+
+        if (!findUser) {
+          return resolve({
+            errors: {
+              message:
+                "Chúng tôi không thể tìm thấy người dùng cho xác minh này. Vui lòng đăng ký tài khoản!",
+            },
+            status: 400,
+          });
+        }
+
+        if (!findUser.is_verified) {
+          return resolve({
+            status: 200,
+            elements: {
+              message: "Tài khoản của bạn chưa được xác thực",
+            },
+            errors: null,
+          });
+        }
+
+        findUser.password = await this.model.hashPassword(password);
+
+        await findUser.save();
+
+        resolve({
+          elements: findUser,
+          status: 200,
+          errors: null,
+          meta: {
+            message: "Thay đổi mật khẩu thành công.",
+          },
+        });
+      } catch (error) {
+        reject(error);
+      }
+    });
+  };
+
+  refreshToken = ({ token }) => {
+    return new Promise((resolve, reject) => {
+      try {
+        const { decoded, valid, errors } = jwtService.verify(
+          token,
+          PRIVATE_KEY_REFRESH_TOKEN
+        );
+
+        if (!valid && errors) {
+          if (errors.message === "jwt expired") {
+            return resolve({
+              status: 401,
+              message: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!",
+            });
+          } else {
+            return resolve({
+              status: 401,
+              message: errors.message,
+            });
+          }
+        }
+
+        const accessToken = jwtService.sign(
+          { user: decoded?.user },
+          PRIVATE_KEY_ACCESS_TOKEN,
+          {
+            expiresIn: "20s",
+          }
+        );
+
+        const refreshToken = jwtService.sign(
+          { user: decoded?.user },
+          PRIVATE_KEY_REFRESH_TOKEN,
+          {
+            expiresIn: "1w",
+          }
+        );
+
+        resolve({
+          errors: null,
+          elements: {
+            accessToken,
+            refreshToken,
+          },
+          status: 200,
+          meta: {
+            message: "Tạo lại key đăng nhập thành công.",
+          },
+        });
+      } catch (error) {
+        reject(error);
+      }
+    });
+  };
 }
 
 module.exports = AuthService;

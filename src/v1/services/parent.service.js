@@ -1,223 +1,160 @@
 const { typeOfObjectId } = require("../utils/functions");
 
 class ParentService {
-    constructor(model) {
-        this.model = model;
-    }
+  constructor(model) {
+    this.model = model;
+  }
 
-    getAll = async ({
-        limit = 5,
-        page = 1,
-        selectField = "",
-        populate = { path: "", select: "" }
-    }) => {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const _model = this.model;
+  getAll = (filters = {}) => {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const page = parseInt(filters.page) || 1;
+        const limit = parseInt(filters.limit) || 5;
+        const skip = (page - 1) * limit;
+        let options = { is_delete: false };
+        let sort = filters.sort || "_id";
+        let sortBy = {};
 
-                if (limit === 0 && page === 0) {
-                    return resolve({
-                        elements: await _model.find(),
-                        errors: null,
-                        status: 200,
-                    })
-                }
+        filters.sort ? (sort = filters.sort.split(",")) : (sort = [sort]);
+        // ["sort", "desc"] || ["_id"]
 
-                if (!populate.path && !populate.select) {
-                    return resolve(await this.#getAllNotPopulate({ limit, page, selectField }));
-                }
+        sort[1] ? (sortBy[sort[0]] = sort[1]) : (sortBy[sort[0]] = "asc");
+        // {sort: "desc"} || {_id: "asc"}
 
-                return resolve(await this.#getAllPopulate({ limit, page, selectField, populate }));
-
-            } catch (error) {
-                return reject(error);
-            }
-        })
-
-    };
-
-    create = async (data) => {
-        const response = await this.model.create(data);
-
-        return {
-            elements: response,
-            status: 201,
-            errors: null,
+        if (filters.search && filters.field) {
+          options = {
+            is_delete: false,
+            [filters.field]: { $regex: filters.search, $options: "i" },
+          };
         }
+
+        const data = await this.model
+          .find(options)
+          .select(filters.selectField)
+          .limit(limit)
+          .skip(skip)
+          .sort(sortBy);
+
+        const total = await this.model.countDocuments(options);
+
+        resolve({
+          elements: data,
+          errors: null,
+          status: 200,
+          meta: {
+            pagination: {
+              page,
+              limit,
+              totalRows: Math.ceil(total / limit),
+            },
+          },
+        });
+      } catch (error) {
+        return reject(error);
+      }
+    });
+  };
+
+  create = async (data) => {
+    const response = await this.model.create(data);
+
+    return {
+      elements: response,
+      status: 201,
+      errors: null,
     };
+  };
 
-    update = async ({ id, data }) => {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const response = await this.model.findOneAndUpdate({ _id: id }, data, {
-                    upsert: false,
-                    new: true
-                });
+  update = async ({ id, data }) => {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const response = await this.model.findOneAndUpdate({ _id: id }, data, {
+          upsert: false,
+          new: true,
+        });
 
-                if(!response) {
-                    return resolve({
-                        errors: {
-                            message: "Id không tồn tại",
-                        },
-                        status: 400,
-                    });
-                }
+        if (!response) {
+          return resolve({
+            errors: {
+              message: "Id không tồn tại",
+            },
+            status: 400,
+          });
+        }
 
-                resolve({
-                    elements: response,
-                    status: 201,
-                    errors: null,
-                });
+        resolve({
+          elements: response,
+          status: 201,
+          errors: null,
+        });
+      } catch (error) {
+        reject(error);
+      }
+    });
+  };
 
-            } catch (error) {
-                reject(error)
-            }
-        })
-    };
+  delete = ({ id, isDelete = false }) => {
+    return new Promise(async (resolve, reject) => {
+      try {
+        if (isDelete) {
+          const response = await this.model.findOneAndDelete(
+            { _id: id },
+            { rawResult: true }
+          );
+          return resolve({
+            errors: null,
+            status: 200,
+            elements: response,
+          });
+        }
 
-    delete = ({ id, isDelete = false }) => {
-        return new Promise(async (resolve, reject) => {
-            try {
-                if (isDelete) {
-                    const response = await this.model.findOneAndDelete({ _id: id }, { rawResult: true });
-                    return resolve({
-                        errors: null,
-                        status: 200,
-                        elements: response,
-                    })
-                }
+        const response = await this.update({ id, data: { is_delete: true } });
 
-                const response = await this.update({ id, data: { is_delete: true } });
+        resolve(response);
+      } catch (error) {
+        reject(error);
+      }
+    });
+  };
 
-                resolve(response);
+  deleteForce = async (id) => {
+    return await this.delete({ id, isDelete: true });
+  };
 
-            } catch (error) {
-                reject(error);
-            }
-        })
-    };
+  getById = (id) => {
+    return new Promise(async (resolve, reject) => {
+      try {
+        if (!typeOfObjectId(id + "")) {
+          return resolve({
+            errors: {
+              message: "Id không đúng giá trị",
+            },
+            elements: null,
+            status: 400,
+          });
+        }
+        const response = await this.model.findById(id).exec();
 
-    deleteForce = async (id) => {
-        return await this.delete({ id, isDelete: true });
-    }
+        if (!response) {
+          return resolve({
+            errors: {
+              message: "Id khÔng tồn tại",
+            },
+            elements: null,
+            status: 200,
+          });
+        }
 
-    getById = (id) => {
-        return new Promise(async (resolve, reject) => {
-            try {
-                if (!typeOfObjectId(id + "")) {
-                    return resolve({
-                        errors: {
-                            message: "Id không đúng giá trị"
-                        },
-                        elements: null,
-                        status: 400,
-                    })
-                }
-                const response = await this.model.findById(id).exec();
-
-                if (!response) {
-                    return resolve({
-                        errors: {
-                            message: "Id khÔng tồn tại",
-                        },
-                        elements: null,
-                        status: 200,
-                    })
-                }
-
-                resolve({
-                    elements: response,
-                    errors: null,
-                    status: 200,
-                });
-            } catch (error) {
-                reject(error)
-            }
-        })
-    };
-
-    #getAllNotPopulate = ({ limit, page, selectField }) => {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const _model = this.model;
-                const skip = (page - 1) * limit;
-
-                await _model
-                    .find({ is_delete: false })
-                    .select(selectField)
-                    .limit(limit)
-                    .skip(skip)
-                    .exec((error, response) => {
-                        if (error) {
-                            reject(error);
-                        }
-
-                        _model.count().exec((error, count) => {
-                            if (error) {
-                                reject(error);
-                            }
-
-                            resolve({
-                                elements: response,
-                                errors: null,
-                                status: 200,
-                                meta: {
-                                    pagination: {
-                                        page,
-                                        limit,
-                                        totalRows: Math.ceil(count / limit),
-                                    }
-                                }
-                            })
-                        })
-                    })
-            } catch (error) {
-                reject(error);
-            }
-        })
-    }
-
-    #getAllPopulate = ({ limit, page, selectField, populate }) => {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const _model = this.model;
-                const skip = (page - 1) * limit;
-
-                await _model
-                    .find({ is_delete: false })
-                    .select(selectField)
-                    .populate(populate)
-                    .limit(limit)
-                    .skip(skip)
-                    .exec((error, response) => {
-                        if (error) {
-                            reject(error);
-                        }
-
-                        _model.count().exec((error, count) => {
-                            if (error) {
-                                reject(error);
-                            }
-
-                            resolve({
-                                elements: response,
-                                errors: null,
-                                status: 200,
-                                meta: {
-                                    pagination: {
-                                        page,
-                                        limit,
-                                        totalRows: Math.ceil(count / limit),
-                                    }
-                                }
-                            })
-                        })
-                    })
-            } catch (error) {
-                reject(error);
-            }
-        })
-    }
+        resolve({
+          elements: response,
+          errors: null,
+          status: 200,
+        });
+      } catch (error) {
+        reject(error);
+      }
+    });
+  };
 }
 
 module.exports = ParentService;

@@ -1,7 +1,7 @@
 @url = http://localhost:5000/api/v1/user
 
 ### GET ALL 
-GET {{url}}?limit=12&page=1
+GET {{url}}?sort=email,desc
 
 ### GET BY ID
 GET {{url}}/63c1260328dff2e7ef69e000

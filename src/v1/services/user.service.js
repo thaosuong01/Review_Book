@@ -30,7 +30,7 @@ class UserService extends ParentService {
 
                 const hashPassword = await this.model.hashPassword(password);
 
-                const response = await this.supperCreate({ email, roleId, password: hashPassword });
+                const response = await this.supperCreate({ email, password: hashPassword });
 
                 resolve(response);
 
