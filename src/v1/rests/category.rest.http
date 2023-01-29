@@ -1,0 +1,36 @@
+@url = http://localhost:5000/api/v1/category
+
+### GET ALL 
+GET {{url}}
+
+### GET BY ID 
+GET {{url}}/63d5de9a4b536c1a69a51491
+
+### GET BY PARENT ID
+GET {{url}}/parent/63d5de9a4b536c1a69a51491
+
+### CREATE 
+POST {{url}}
+Content-Type: application/json
+
+{
+    "name": "Sách đầu tư",
+    "slug": "sach-đau-tu",
+    "level": "2",
+    "parentId": "63d5de9a4b536c1a69a51491"
+}
+
+### UPDATE 
+PATCH {{url}}/63d5e18c3502f8869f59f6f6
+Content-Type: application/json
+
+{
+    "name": "Sách chiến lược kinh doanh",
+    "slug": "sach-chien-luoc-kinh-doanh"
+}
+
+### DELETE
+DELETE {{url}}/63bffa430fd6f6d8d3f95dd7
+
+### DELETE
+DELETE {{url}}/force/63bffa430fd6f6d8d3f95dd7

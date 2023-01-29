@@ -1,0 +1,39 @@
+@url = http://localhost:5000/api/v1/post
+
+### GET ALL 
+GET {{url}}?page=1&limit=2
+
+### GET BY ID 
+GET {{url}}/63d5de9a4b536c1a69a51491
+
+### GET BY PARENT ID
+GET {{url}}/parent/63d5de9a4b536c1a69a51491
+
+### CREATE 
+POST {{url}}
+Content-Type: application/json
+
+{
+    "title": "Title 1",
+    "slug": "title-1",
+    "detail_text": "text detail 1",
+    "detail_html": "text html 1",
+    "categoryId": "63d5e18c3502f8869f59f6f6",
+    "userId": "63c1a3ef886894fab53ee7c0"
+}
+
+### UPDATE 
+PATCH {{url}}/63d6118df048ca353c66ff0e
+Content-Type: application/json
+
+{
+    "title": "Title 1",
+    "slug": "title-1",
+    "detail_text": "text detail 2"
+}
+
+### DELETE
+DELETE {{url}}/63bffa430fd6f6d8d3f95dd7
+
+### DELETE
+DELETE {{url}}/force/63bffa430fd6f6d8d3f95dd7

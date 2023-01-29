@@ -12,15 +12,23 @@ class CategoryController extends ParentController {
     try {
       const data = req.body;
 
-      if (!data.name || !data.slug || !data.level || !data.parentId) {
+      if (!data.name || !data.slug) {
         return next({
-          message:
-            "Tên danh mục, slug, level hoặc parentId là những trường bắt buộc",
+          message: "Tên danh mục hoặc slug là những trường bắt buộc",
           status: 400,
         });
       }
 
       const response = await this.service.create(data);
+      res.status(response.status).json(response);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getByParentId = async (req, res, next) => {
+    try {
+      const response = await this.service.getByParentId(req.params.id);
       res.status(response.status).json(response);
     } catch (error) {
       next(error);
