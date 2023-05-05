@@ -1,25 +1,56 @@
-import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
+import store from "@/store";
+import { createRouter, createWebHistory } from "vue-router";
+import confirmRoute from "./confirmRoute";
+import homeRouteConfig from "./homeRoute";
+import managerRouteConfig from "./managerRoute";
+import notfoundRouteConfig from "./notFoundRoute";
+import passwordRouteConfig from "./passwordRoute";
 
 const routes = [
-  {
-    path: '/',
-    name: 'home',
-    component: HomeView
-  },
-  {
-    path: '/about',
-    name: 'about',
-    // route level code-splitting
-    // this generates a separate chunk (about.[hash].js) for this route
-    // which is lazy-loaded when the route is visited.
-    component: () => import(/* webpackChunkName: "about" */ '../views/AboutView.vue')
-  }
-]
+  ...homeRouteConfig,
+  ...managerRouteConfig,
+  ...passwordRouteConfig,
+  ...notfoundRouteConfig,
+  ...confirmRoute,
+];
 
 const router = createRouter({
   history: createWebHistory(process.env.BASE_URL),
-  routes
-})
+  routes,
+  scrollBehavior() {
+    document.getElementById("app").scrollIntoView({ behavior: "smooth" });
+  },
+});
 
-export default router
+router.beforeEach(async (to, form, next) => {
+  if (to.meta?.auth) {
+    store.dispatch("auth/getCurrentUserLogin").catch(async (error) => {
+      if (
+        error.response &&
+        error.response.data &&
+        error.response.data.errors &&
+        error.response.data.errors.message !== "jwt expired"
+      ) {
+        await handleLogout();
+      }
+    });
+
+    const isLoggedIn = store.getters["auth/isLoggedIn"];
+
+    if (to.path !== "/login" && !isLoggedIn) {
+      next({
+        name: "login",
+      });
+    }
+
+    if (to.path === "/login" && isLoggedIn) {
+      next({
+        name: "dashboard",
+      });
+    }
+  }
+
+  next();
+});
+
+export default router;

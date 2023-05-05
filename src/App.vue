@@ -1,29 +1,49 @@
+<script>
+import { computed, defineComponent, watch } from "vue";
+import { useStore } from "vuex";
+import Toast from "./components/Toast.vue";
+
+export default defineComponent({
+  components: {
+    Toast,
+  },
+  setup() {
+    const store = useStore();
+    const text = computed(() => store.state["toast"].text);
+    const open = computed(() => store.state["toast"].open);
+    const color = computed(() => store.state["toast"].color);
+    const duration = computed(() => store.state["toast"].timeout);
+
+    watch(
+      () => store.state["toast"].open,
+      (open) => {
+        if (open) {
+          setTimeout(
+            () => store.dispatch("toast/saveOpen", { open: false }),
+            duration.value + 4
+          );
+        }
+      }
+    );
+
+    return {
+      text,
+      open,
+      color,
+    };
+  },
+});
+</script>
+
 <template>
-  <nav>
-    <router-link to="/">Home</router-link> |
-    <router-link to="/about">About</router-link>
-  </nav>
-  <router-view/>
+  <div>
+    <router-view />
+
+    <Toast v-if="open" :open="open" :color="color" :text="text" />
+  </div>
 </template>
 
 <style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-}
-
-nav {
-  padding: 30px;
-}
-
-nav a {
-  font-weight: bold;
-  color: #2c3e50;
-}
-
 nav a.router-link-exact-active {
   color: #42b983;
 }
