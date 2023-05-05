@@ -22,6 +22,7 @@ const CategorySchema = new Schema(
     parent_id: {
       type: ObjectId,
       default: null,
+      ref: "categories",
     },
     image: {
       type: String,

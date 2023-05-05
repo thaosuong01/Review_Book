@@ -4,7 +4,7 @@ mongoose.set("strictQuery", false);
 
 mongoose
     .connect(process.env.MONGO_URI)
-    .then(_ => console.log('connect database '))
+    .then(_ => console.log('Connect Database Success'))
     .catch((error) => console.log("Error connect:::", error));
 
 mongoose.set("debug", true);

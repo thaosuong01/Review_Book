@@ -7,7 +7,6 @@ class ParentController {
     try {
       const filters = req.query;
       const response = await this.service.getAll(filters);
-
       res.status(response.status).json(response);
     } catch (error) {
       next(error);
@@ -25,7 +24,7 @@ class ParentController {
 
   create = async (req, res, next) => {
     try {
-      const response = await this.service.create();
+      const response = await this.service.create(req.body);
       res.status(response.status).json(response);
     } catch (error) {
       next(error);
@@ -34,7 +33,7 @@ class ParentController {
 
   update = async (req, res, next) => {
     try {
-      if(Object.keys(req.body).length === 0) {
+      if (Object.keys(req.body).length === 0) {
         return next({
           message: "Thiếu nội dung.",
           status: 400,
@@ -45,7 +44,6 @@ class ParentController {
         id: req.params.id,
         data: req.body,
       });
-
       res.status(response.status).json(response);
     } catch (error) {
       next(error);
@@ -65,6 +63,8 @@ class ParentController {
         response = await this.service.delete({ id });
       }
 
+      console.log(response);
+
       res.status(response.status).json(response);
     } catch (error) {
       next(error);
@@ -74,9 +74,7 @@ class ParentController {
   deleteForce = async (req, res, next) => {
     try {
       const id = req.params.id;
-
       const response = await this.service.deleteForce(id);
-
       res.status(response.status).json(response);
     } catch (error) {
       next(error);

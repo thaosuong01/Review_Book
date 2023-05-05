@@ -11,7 +11,7 @@ function validateEmail(email) {
       if (!valid && reason && !validators[reason].valid) {
         return resolve({
           errors: {
-            message: "Địa chỉ email không hợp lệ",
+            message: "Vui lòng cung cấp một địa chỉ email hợp lệ",
           },
           status: 400,
         });
@@ -31,18 +31,19 @@ async function sendEmailVerifyAccount(dataSend, options) {
     host: "smtp.gmail.com",
     service: "gmail",
     port: 587,
-    secure: false,
+    secure: false, // true for 465, false for other ports
     auth: {
-      user: process.env.EMAIL_APP_USERNAME,
-      pass: process.env.EMAIL_APP_PASSWORD,
+      user: process.env.EMAIL_APP_USERNAME, // generated ethereal user
+      pass: process.env.EMAIL_APP_PASSWORD, // generated ethereal password
     },
   });
 
   try {
+    // send mail with defined transport object
     const response = await transporter.sendMail({
-      from: `"Website review sách" <${process.env.EMAIL_APP_USERNAME}>`,
-      to: dataSend.sendToEmail,
-      subject: options.subject,
+      from: `"Website review sách 👻" <${process.env.EMAIL_APP_USERNAME}>`, // sender address
+      to: dataSend.sendToEmail, // list of receivers
+      subject: options.subject, // Subject line
       html: options.handleHtmlLang,
     });
 
@@ -51,6 +52,9 @@ async function sendEmailVerifyAccount(dataSend, options) {
         status: 201,
         errors: null,
         elements: dataSend.data,
+        meta: {
+          message: "Gửi e-mail thành công!",
+        },
       };
     }
   } catch (error) {
@@ -62,4 +66,7 @@ async function sendEmailVerifyAccount(dataSend, options) {
   }
 }
 
-module.exports = { validateEmail, sendEmailVerifyAccount };
+module.exports = {
+  validateEmail,
+  sendEmailVerifyAccount,
+};

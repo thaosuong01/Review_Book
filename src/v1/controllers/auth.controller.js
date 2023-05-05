@@ -7,7 +7,7 @@ const refreshTokenCookieOptions = {
   secure: process.env.NODE_ENV !== "production" ? false : true,
   path: "/",
   sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
-  maxAge: 3.154e10, //1 year
+  maxAge: 3.154e10, // 1 year
 };
 
 class AuthController extends ParentController {
@@ -23,13 +23,14 @@ class AuthController extends ParentController {
       if (!data.email || !data.password) {
         return next({
           status: 400,
-          message: "Chưa nhập email hoặc password",
+          message: "Thiếu email or password",
         });
       }
 
       const response = await this.service.signUp({
         email: data.email,
         password: data.password,
+        ...data,
       });
 
       res.status(response.status).json(response);
@@ -45,7 +46,7 @@ class AuthController extends ParentController {
       if (!data.email || !data.password) {
         return next({
           status: 400,
-          message: "Chưa nhập email hoặc password",
+          message: "Thiếu email or password",
         });
       }
 
@@ -89,7 +90,6 @@ class AuthController extends ParentController {
       const { email } = req.params;
       const { token } = req.query;
       const response = await this.service.verifyAccount({ email, otp: token });
-
       res.status(response.status).json(response);
     } catch (error) {
       next(error);
@@ -101,7 +101,7 @@ class AuthController extends ParentController {
       if (!req.body.email) {
         return next({
           status: 400,
-          message: "Chưa nhập trường email",
+          message: "Thiếu trường email",
         });
       }
 
@@ -111,7 +111,7 @@ class AuthController extends ParentController {
 
       res.status(response.status).json(response);
     } catch (error) {
-      error;
+      next(error);
     }
   };
 
@@ -123,7 +123,7 @@ class AuthController extends ParentController {
 
       if (!token || !data.password) {
         return next({
-          message: "Chưa nhập trường token hoặc password",
+          message: "Thiếu trường token hoặc password",
           status: 400,
         });
       }
@@ -163,7 +163,7 @@ class AuthController extends ParentController {
       if (!refreshToken) {
         return next({
           status: 401,
-          message: "Vui lòng đăng nhập lại.",
+          message: "Vui lòng đăng nhập lại",
         });
       }
 
@@ -178,6 +178,27 @@ class AuthController extends ParentController {
           refreshTokenCookieOptions
         );
       }
+
+      res.status(response.status).json(response);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  resendVerifyAccount = async (req, res, next) => {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return next({
+          status: 400,
+          message: "Thiếu email",
+        });
+      }
+
+      const response = await this.service.resendVerifyAccount({
+        email,
+      });
 
       res.status(response.status).json(response);
     } catch (error) {

@@ -8,11 +8,10 @@ module.exports.jwtService = {
   verify: (token, privateKey) => {
     try {
       const decoded = jwt.verify(token, privateKey);
-
       return {
         valid: true,
-        errors: false,
         decoded,
+        errors: null,
       };
     } catch (e) {
       return {
